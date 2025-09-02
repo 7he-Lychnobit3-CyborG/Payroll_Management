@@ -1128,6 +1128,13 @@ const EmployeeDashboard = () => {
   const { user } = useAuth();
   const [payrollRecords, setPayrollRecords] = useState([]);
   const [reimbursements, setReimbursements] = useState([]);
+  const [isNewClaimOpen, setIsNewClaimOpen] = useState(false);
+  const [newClaim, setNewClaim] = useState({
+    category: '',
+    amount: '',
+    description: '',
+    receipt_url: ''
+  });
 
   useEffect(() => {
     if (user?.employee_id) {
@@ -1152,6 +1159,86 @@ const EmployeeDashboard = () => {
     } catch (error) {
       console.error('Error fetching reimbursements:', error);
     }
+  };
+
+  const handleCreateClaim = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/reimbursements`, {
+        ...newClaim,
+        amount: parseFloat(newClaim.amount)
+      });
+      
+      toast({
+        title: "Success",
+        description: "Reimbursement claim submitted successfully"
+      });
+      
+      setIsNewClaimOpen(false);
+      setNewClaim({
+        category: '',
+        amount: '',
+        description: '',
+        receipt_url: ''
+      });
+      fetchReimbursements();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to submit reimbursement claim",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const downloadPayslip = (record) => {
+    // Create a simple HTML payslip
+    const payslipHTML = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Payslip - ${record.employee_id}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .details { margin: 20px 0; }
+          .row { display: flex; justify-content: space-between; margin: 10px 0; }
+          .total { border-top: 2px solid #000; font-weight: bold; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Payroll Central</h1>
+          <h2>Employee Payslip</h2>
+        </div>
+        <div class="details">
+          <div class="row"><span>Employee ID:</span><span>${record.employee_id}</span></div>
+          <div class="row"><span>Period:</span><span>${record.month}/${record.year}</span></div>
+          <div class="row"><span>Base Salary:</span><span>$${record.base_salary.toLocaleString()}</span></div>
+          <div class="row"><span>Overtime:</span><span>$${(record.overtime_hours * record.overtime_rate).toLocaleString()}</span></div>
+          <div class="row"><span>Bonuses:</span><span>$${record.bonuses.toLocaleString()}</span></div>
+          <div class="row"><span>Gross Salary:</span><span>$${record.gross_salary.toLocaleString()}</span></div>
+          <div class="row"><span>Total Deductions:</span><span>-$${record.total_deductions.toLocaleString()}</span></div>
+          <div class="row total"><span>Net Salary:</span><span>$${record.net_salary.toLocaleString()}</span></div>
+        </div>
+      </body>
+      </html>
+    `;
+    
+    const blob = new Blob([payslipHTML], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `payslip_${record.employee_id}_${record.month}_${record.year}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({
+      title: "Success",
+      description: "Payslip downloaded successfully"
+    });
   };
 
   const formatCurrency = (amount) => `$${amount?.toLocaleString() || '0'}`;
