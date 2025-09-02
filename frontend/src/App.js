@@ -760,6 +760,146 @@ const EmployeeDashboard = () => {
 
 // Payroll Officer Dashboard
 const PayrollOfficerDashboard = () => {
+  const [analytics, setAnalytics] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [payrollRecords, setPayrollRecords] = useState([]);
+  const [deductions, setDeductions] = useState([]);
+  const [activeTab, setActiveTab] = useState('process');
+  const [isProcessingPayroll, setIsProcessingPayroll] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [payrollData, setPayrollData] = useState({
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+    overtime_hours: 0,
+    bonuses: 0
+  });
+
+  useEffect(() => {
+    fetchAnalytics();
+    fetchEmployees();
+    fetchPayrollRecords();
+    fetchDeductions();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await axios.get(`${API}/analytics/dashboard`);
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get(`${API}/employees`);
+      setEmployees(response.data);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const fetchPayrollRecords = async () => {
+    try {
+      const response = await axios.get(`${API}/payroll`);
+      setPayrollRecords(response.data);
+    } catch (error) {
+      console.error('Error fetching payroll records:', error);
+    }
+  };
+
+  const fetchDeductions = async () => {
+    try {
+      const response = await axios.get(`${API}/deductions`);
+      setDeductions(response.data);
+    } catch (error) {
+      console.error('Error fetching deductions:', error);
+    }
+  };
+
+  const handleProcessPayroll = async (e) => {
+    e.preventDefault();
+    if (!selectedEmployee) {
+      toast({
+        title: "Error",
+        description: "Please select an employee",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessingPayroll(true);
+    try {
+      await axios.post(`${API}/payroll`, {
+        employee_id: selectedEmployee,
+        ...payrollData
+      });
+      
+      toast({
+        title: "Success",
+        description: "Payroll processed successfully"
+      });
+      
+      fetchPayrollRecords();
+      fetchAnalytics();
+      setSelectedEmployee('');
+      setPayrollData({
+        month: new Date().getMonth() + 1,
+        year: new Date().getFullYear(),
+        overtime_hours: 0,
+        bonuses: 0
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process payroll",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessingPayroll(false);
+    }
+  };
+
+  const handleBulkProcessPayroll = async () => {
+    setIsProcessingPayroll(true);
+    try {
+      const currentMonth = new Date().getMonth() + 1;
+      const currentYear = new Date().getFullYear();
+      
+      // Process payroll for all active employees
+      const promises = employees.map(employee => 
+        axios.post(`${API}/payroll`, {
+          employee_id: employee.employee_id,
+          month: currentMonth,
+          year: currentYear,
+          overtime_hours: 0,
+          bonuses: 0
+        })
+      );
+
+      await Promise.all(promises);
+      
+      toast({
+        title: "Success",
+        description: `Processed payroll for ${employees.length} employees`
+      });
+      
+      fetchPayrollRecords();
+      fetchAnalytics();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process bulk payroll",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessingPayroll(false);
+    }
+  };
+
+  const formatCurrency = (amount) => `$${amount?.toLocaleString() || '0'}`;
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
+
   return (
     <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
       <div className="flex items-center justify-between">
@@ -768,10 +908,295 @@ const PayrollOfficerDashboard = () => {
           <p className="text-slate-600">Process salaries and manage payroll operations</p>
         </div>
       </div>
-      <div className="text-center py-20">
-        <Calculator className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-        <p className="text-slate-500">Payroll Officer Dashboard - Coming Soon</p>
-      </div>
+
+      {/* Analytics Cards */}
+      {analytics && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Employees"
+            value={analytics.total_employees}
+            icon={Users}
+            color="blue"
+          />
+          <StatCard
+            title="Monthly Payroll"
+            value={formatCurrency(analytics.monthly_payroll_cost)}
+            icon={DollarSign}
+            color="emerald"
+          />
+          <StatCard
+            title="Processed This Month"
+            value={analytics.processed_payrolls}
+            icon={CheckCircle}
+            color="purple"
+          />
+          <StatCard
+            title="Pending Processing"
+            value={analytics.total_employees - analytics.processed_payrolls}
+            icon={Clock}
+            color="orange"
+          />
+        </div>
+      )}
+
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 bg-white p-1 rounded-xl shadow-sm">
+          <TabsTrigger value="process" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            Process Payroll
+          </TabsTrigger>
+          <TabsTrigger value="records" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            Payroll Records
+          </TabsTrigger>
+          <TabsTrigger value="deductions" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            Manage Deductions
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="process" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Individual Payroll Processing */}
+            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="w-5 h-5 text-emerald-600" />
+                  Process Individual Payroll
+                </CardTitle>
+                <CardDescription>Process payroll for a specific employee</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleProcessPayroll} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="employee">Select Employee</Label>
+                    <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose an employee" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {employees.map((employee) => (
+                          <SelectItem key={employee.employee_id} value={employee.employee_id}>
+                            {employee.employee_id} - {employee.first_name} {employee.last_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="month">Month</Label>
+                      <Select 
+                        value={payrollData.month.toString()} 
+                        onValueChange={(value) => setPayrollData({...payrollData, month: parseInt(value)})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({length: 12}, (_, i) => (
+                            <SelectItem key={i+1} value={(i+1).toString()}>
+                              {new Date(2024, i).toLocaleString('default', { month: 'long' })}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="year">Year</Label>
+                      <Select 
+                        value={payrollData.year.toString()} 
+                        onValueChange={(value) => setPayrollData({...payrollData, year: parseInt(value)})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2024">2024</SelectItem>
+                          <SelectItem value="2025">2025</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="overtime">Overtime Hours</Label>
+                    <Input
+                      id="overtime"
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={payrollData.overtime_hours}
+                      onChange={(e) => setPayrollData({...payrollData, overtime_hours: parseFloat(e.target.value) || 0})}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="bonuses">Bonuses ($)</Label>
+                    <Input
+                      id="bonuses"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={payrollData.bonuses}
+                      onChange={(e) => setPayrollData({...payrollData, bonuses: parseFloat(e.target.value) || 0})}
+                    />
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                    disabled={isProcessingPayroll}
+                  >
+                    {isProcessingPayroll ? 'Processing...' : 'Process Payroll'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Bulk Payroll Processing */}
+            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-600" />
+                  Bulk Payroll Processing
+                </CardTitle>
+                <CardDescription>Process payroll for all employees at once</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="text-center py-6">
+                  <div className="text-3xl font-bold text-slate-900 mb-2">
+                    {employees.length}
+                  </div>
+                  <p className="text-slate-600">Active Employees</p>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span>Current Month:</span>
+                    <span className="font-medium">
+                      {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Estimated Cost:</span>
+                    <span className="font-medium text-emerald-600">
+                      {formatCurrency(employees.reduce((sum, emp) => sum + emp.base_salary, 0))}
+                    </span>
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={handleBulkProcessPayroll}
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={isProcessingPayroll}
+                >
+                  {isProcessingPayroll ? 'Processing All...' : 'Process All Employee Payrolls'}
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="records" className="space-y-6">
+          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Recent Payroll Records</CardTitle>
+                <CardDescription>View and manage processed payrolls</CardDescription>
+              </div>
+              <Button variant="outline" className="text-emerald-600">
+                <Download className="w-4 h-4 mr-2" />
+                Export Records
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Base Salary</TableHead>
+                    <TableHead>Gross</TableHead>
+                    <TableHead>Deductions</TableHead>
+                    <TableHead>Net Salary</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payrollRecords.slice(0, 20).map((record) => {
+                    const employee = employees.find(emp => emp.employee_id === record.employee_id);
+                    return (
+                      <TableRow key={record.id}>
+                        <TableCell className="font-medium">{record.employee_id}</TableCell>
+                        <TableCell>
+                          {employee ? `${employee.first_name} ${employee.last_name}` : 'N/A'}
+                        </TableCell>
+                        <TableCell>{record.month}/{record.year}</TableCell>
+                        <TableCell>{formatCurrency(record.base_salary)}</TableCell>
+                        <TableCell>{formatCurrency(record.gross_salary)}</TableCell>
+                        <TableCell className="text-red-600">-{formatCurrency(record.total_deductions)}</TableCell>
+                        <TableCell className="font-semibold text-emerald-600">
+                          {formatCurrency(record.net_salary)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={record.status === 'processed' ? 'default' : 'secondary'}>
+                            {record.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="deductions" className="space-y-6">
+          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle>Manage Deductions</CardTitle>
+              <CardDescription>View and manage payroll deductions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Deduction Name</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Rate/Amount</TableHead>
+                    <TableHead>Mandatory</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {deductions.map((deduction) => (
+                    <TableRow key={deduction.id}>
+                      <TableCell className="font-medium">{deduction.name}</TableCell>
+                      <TableCell className="capitalize">{deduction.type}</TableCell>
+                      <TableCell>
+                        {deduction.is_percentage 
+                          ? `${deduction.percentage}%` 
+                          : formatCurrency(deduction.amount)
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={deduction.is_mandatory ? 'default' : 'secondary'}>
+                          {deduction.is_mandatory ? 'Mandatory' : 'Optional'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="default">Active</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
