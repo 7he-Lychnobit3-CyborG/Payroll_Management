@@ -572,10 +572,166 @@ const AdminDashboard = () => {
                 <CardTitle>Employee Management</CardTitle>
                 <CardDescription>Manage employee information and records</CardDescription>
               </div>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Employee
-              </Button>
+              <Dialog open={isAddEmployeeOpen} onOpenChange={setIsAddEmployeeOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-emerald-600 hover:bg-emerald-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Employee
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add New Employee</DialogTitle>
+                    <DialogDescription>Enter employee information to add them to the system</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleAddEmployee} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="employee_id">Employee ID</Label>
+                        <Input
+                          id="employee_id"
+                          value={newEmployee.employee_id}
+                          onChange={(e) => setNewEmployee({...newEmployee, employee_id: e.target.value})}
+                          placeholder="EMP0001"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="first_name">First Name</Label>
+                        <Input
+                          id="first_name"
+                          value={newEmployee.first_name}
+                          onChange={(e) => setNewEmployee({...newEmployee, first_name: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="last_name">Last Name</Label>
+                        <Input
+                          id="last_name"
+                          value={newEmployee.last_name}
+                          onChange={(e) => setNewEmployee({...newEmployee, last_name: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newEmployee.email}
+                          onChange={(e) => setNewEmployee({...newEmployee, email: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          value={newEmployee.phone}
+                          onChange={(e) => setNewEmployee({...newEmployee, phone: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="department">Department</Label>
+                        <Select value={newEmployee.department} onValueChange={(value) => setNewEmployee({...newEmployee, department: value})}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Engineering">Engineering</SelectItem>
+                            <SelectItem value="Sales">Sales</SelectItem>
+                            <SelectItem value="Marketing">Marketing</SelectItem>
+                            <SelectItem value="HR">HR</SelectItem>
+                            <SelectItem value="Finance">Finance</SelectItem>
+                            <SelectItem value="Operations">Operations</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="position">Position</Label>
+                        <Input
+                          id="position"
+                          value={newEmployee.position}
+                          onChange={(e) => setNewEmployee({...newEmployee, position: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="base_salary">Base Salary</Label>
+                        <Input
+                          id="base_salary"
+                          type="number"
+                          value={newEmployee.base_salary}
+                          onChange={(e) => setNewEmployee({...newEmployee, base_salary: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="joining_date">Joining Date</Label>
+                        <Input
+                          id="joining_date"
+                          type="date"
+                          value={newEmployee.joining_date}
+                          onChange={(e) => setNewEmployee({...newEmployee, joining_date: e.target.value})}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="tax_id">Tax ID</Label>
+                        <Input
+                          id="tax_id"
+                          value={newEmployee.tax_id}
+                          onChange={(e) => setNewEmployee({...newEmployee, tax_id: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="bank_account">Bank Account</Label>
+                      <Input
+                        id="bank_account"
+                        value={newEmployee.bank_account}
+                        onChange={(e) => setNewEmployee({...newEmployee, bank_account: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Address</Label>
+                      <Textarea
+                        id="address"
+                        value={newEmployee.address}
+                        onChange={(e) => setNewEmployee({...newEmployee, address: e.target.value})}
+                        required
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
+                      <Button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                        Add Employee
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setIsAddEmployeeOpen(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <Table>
@@ -605,10 +761,14 @@ const AdminDashboard = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => {
+                              setSelectedEmployee(employee);
+                              setIsEditEmployeeOpen(true);
+                            }}
+                          >
                             <Edit className="w-4 h-4" />
                           </Button>
                         </div>
@@ -619,6 +779,113 @@ const AdminDashboard = () => {
               </Table>
             </CardContent>
           </Card>
+
+          {/* Edit Employee Dialog */}
+          <Dialog open={isEditEmployeeOpen} onOpenChange={setIsEditEmployeeOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Edit Employee</DialogTitle>
+                <DialogDescription>Update employee information</DialogDescription>
+              </DialogHeader>
+              {selectedEmployee && (
+                <form onSubmit={handleEditEmployee} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_first_name">First Name</Label>
+                      <Input
+                        id="edit_first_name"
+                        value={selectedEmployee.first_name}
+                        onChange={(e) => setSelectedEmployee({...selectedEmployee, first_name: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_last_name">Last Name</Label>
+                      <Input
+                        id="edit_last_name"
+                        value={selectedEmployee.last_name}
+                        onChange={(e) => setSelectedEmployee({...selectedEmployee, last_name: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_email">Email</Label>
+                      <Input
+                        id="edit_email"
+                        type="email"
+                        value={selectedEmployee.email}
+                        onChange={(e) => setSelectedEmployee({...selectedEmployee, email: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_phone">Phone</Label>
+                      <Input
+                        id="edit_phone"
+                        value={selectedEmployee.phone}
+                        onChange={(e) => setSelectedEmployee({...selectedEmployee, phone: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_department">Department</Label>
+                      <Select 
+                        value={selectedEmployee.department} 
+                        onValueChange={(value) => setSelectedEmployee({...selectedEmployee, department: value})}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Engineering">Engineering</SelectItem>
+                          <SelectItem value="Sales">Sales</SelectItem>
+                          <SelectItem value="Marketing">Marketing</SelectItem>
+                          <SelectItem value="HR">HR</SelectItem>
+                          <SelectItem value="Finance">Finance</SelectItem>
+                          <SelectItem value="Operations">Operations</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit_position">Position</Label>
+                      <Input
+                        id="edit_position"
+                        value={selectedEmployee.position}
+                        onChange={(e) => setSelectedEmployee({...selectedEmployee, position: e.target.value})}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit_base_salary">Base Salary</Label>
+                    <Input
+                      id="edit_base_salary"
+                      type="number"
+                      value={selectedEmployee.base_salary}
+                      onChange={(e) => setSelectedEmployee({...selectedEmployee, base_salary: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    <Button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                      Update Employee
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setIsEditEmployeeOpen(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="payroll" className="space-y-6">
