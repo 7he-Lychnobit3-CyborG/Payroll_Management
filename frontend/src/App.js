@@ -1,54 +1,886 @@
-import { useEffect } from "react";
-import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './App.css';
+
+// Import shadcn components
+import { Button } from './components/ui/button';
+import { Input } from './components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './components/ui/tabs';
+import { Badge } from './components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './components/ui/select';
+import { Label } from './components/ui/label';
+import { Textarea } from './components/ui/textarea';
+import { toast } from './hooks/use-toast';
+import { Toaster } from './components/ui/toaster';
+
+// Icons
+import { Users, DollarSign, FileText, Calculator, TrendingUp, Clock, Award, Building, Phone, Mail, Calendar, CreditCard, Receipt, Filter, Download, Plus, Edit, Eye, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const Home = () => {
-  const helloWorldApi = async () => {
+// Auth Context
+const AuthContext = React.createContext();
+
+const useAuth = () => {
+  const context = React.useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      fetchCurrentUser();
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchCurrentUser = async () => {
     try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
+      const response = await axios.get(`${API}/auth/me`);
+      setUser(response.data);
+    } catch (error) {
+      localStorage.removeItem('token');
+      delete axios.defaults.headers.common['Authorization'];
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
+  const login = async (username, password) => {
+    try {
+      const response = await axios.post(`${API}/auth/login`, { username, password });
+      const { access_token, user: userData } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+      setUser(userData);
+      
+      return userData;
+    } catch (error) {
+      throw new Error(error.response?.data?.detail || 'Login failed');
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    setUser(null);
+  };
+
+  const value = {
+    user,
+    login,
+    logout,
+    loading
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+// Login Component
+const Login = () => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      await login(username, password);
+      navigate('/dashboard');
+      toast({
+        title: "Login Successful",
+        description: "Welcome to Payroll Management System"
+      });
+    } catch (error) {
+      toast({
+        title: "Login Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
+    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center mb-4">
+              <DollarSign className="w-8 h-8 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-slate-800">Payroll Central</CardTitle>
+            <CardDescription className="text-slate-600">
+              Comprehensive Payroll Management System
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  type="text"
+                  placeholder="Enter your username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-11"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Signing In...' : 'Sign In'}
+              </Button>
+            </form>
+            
+            <div className="pt-4 border-t">
+              <p className="text-sm text-center text-slate-600 mb-3">Demo Credentials:</p>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between bg-slate-50 p-2 rounded">
+                  <span className="font-medium">Admin:</span>
+                  <span>admin / admin123</span>
+                </div>
+                <div className="flex justify-between bg-slate-50 p-2 rounded">
+                  <span className="font-medium">Payroll Officer:</span>
+                  <span>payroll / payroll123</span>
+                </div>
+                <div className="flex justify-between bg-slate-50 p-2 rounded">
+                  <span className="font-medium">Employee:</span>
+                  <span>john.doe / employee123</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
 
-function App() {
+// Dashboard Components
+const StatCard = ({ title, value, icon: Icon, trend, color = "emerald" }) => (
+  <Card className="hover:shadow-lg transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm">
+    <CardContent className="p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-slate-600">{title}</p>
+          <p className="text-2xl font-bold text-slate-900">{value}</p>
+          {trend && (
+            <p className="text-xs text-slate-500 mt-1">
+              <TrendingUp className="w-3 h-3 inline mr-1" />
+              {trend}
+            </p>
+          )}
+        </div>
+        <div className={`p-3 rounded-xl bg-${color}-100`}>
+          <Icon className={`w-6 h-6 text-${color}-600`} />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+// Admin Dashboard
+const AdminDashboard = () => {
+  const [analytics, setAnalytics] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [payrollRecords, setPayrollRecords] = useState([]);
+  const [reimbursements, setReimbursements] = useState([]);
+  const [activeTab, setActiveTab] = useState('overview');
+
+  useEffect(() => {
+    fetchAnalytics();
+    fetchEmployees();
+    fetchPayrollRecords();
+    fetchReimbursements();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      const response = await axios.get(`${API}/analytics/dashboard`);
+      setAnalytics(response.data);
+    } catch (error) {
+      console.error('Error fetching analytics:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await axios.get(`${API}/employees`);
+      setEmployees(response.data);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const fetchPayrollRecords = async () => {
+    try {
+      const response = await axios.get(`${API}/payroll`);
+      setPayrollRecords(response.data);
+    } catch (error) {
+      console.error('Error fetching payroll records:', error);
+    }
+  };
+
+  const fetchReimbursements = async () => {
+    try {
+      const response = await axios.get(`${API}/reimbursements`);
+      setReimbursements(response.data);
+    } catch (error) {
+      console.error('Error fetching reimbursements:', error);
+    }
+  };
+
+  const formatCurrency = (amount) => `$${amount?.toLocaleString() || '0'}`;
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
+
   return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+    <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+          <p className="text-slate-600">Comprehensive payroll management overview</p>
+        </div>
+      </div>
+
+      {/* Analytics Cards */}
+      {analytics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Total Employees"
+            value={analytics.total_employees}
+            icon={Users}
+            trend="+12% from last month"
+            color="blue"
+          />
+          <StatCard
+            title="Monthly Payroll"
+            value={formatCurrency(analytics.monthly_payroll_cost)}
+            icon={DollarSign}
+            trend="+8% from last month"
+            color="emerald"
+          />
+          <StatCard
+            title="Processed Payrolls"
+            value={analytics.processed_payrolls}
+            icon={CheckCircle}
+            trend="Current month"
+            color="purple"
+          />
+          <StatCard
+            title="Pending Reimbursements"
+            value={analytics.pending_reimbursements}
+            icon={AlertCircle}
+            trend="Needs attention"
+            color="orange"
+          />
+        </div>
+      )}
+
+      {/* Main Content Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 bg-white p-1 rounded-xl shadow-sm">
+          <TabsTrigger value="overview" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="employees" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            Employees
+          </TabsTrigger>
+          <TabsTrigger value="payroll" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            Payroll
+          </TabsTrigger>
+          <TabsTrigger value="reimbursements" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">
+            Reimbursements
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Recent Payroll Activity */}
+            <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calculator className="w-5 h-5 text-emerald-600" />
+                  Recent Payroll Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {payrollRecords.slice(0, 5).map((record) => (
+                    <div key={record.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <div>
+                        <p className="font-medium text-sm">{record.employee_id}</p>
+                        <p className="text-xs text-slate-500">
+                          {record.month}/{record.year}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-emerald-600">
+                          {formatCurrency(record.net_salary)}
+                        </p>
+                        <Badge variant={record.status === 'processed' ? 'default' : 'secondary'}>
+                          {record.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Deductions Breakdown */}
+            {analytics?.deductions_breakdown && (
+              <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-purple-600" />
+                    Deductions Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {Object.entries(analytics.deductions_breakdown).map(([type, amount]) => (
+                      <div key={type} className="flex items-center justify-between">
+                        <span className="text-sm font-medium capitalize">{type.replace('_', ' ')}</span>
+                        <span className="font-semibold text-slate-900">
+                          {formatCurrency(amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="employees" className="space-y-6">
+          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Employee Management</CardTitle>
+                <CardDescription>Manage employee information and records</CardDescription>
+              </div>
+              <Button className="bg-emerald-600 hover:bg-emerald-700">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Employee
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Department</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Salary</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell className="font-medium">{employee.employee_id}</TableCell>
+                      <TableCell>{employee.first_name} {employee.last_name}</TableCell>
+                      <TableCell>{employee.department}</TableCell>
+                      <TableCell>{employee.position}</TableCell>
+                      <TableCell>{formatCurrency(employee.base_salary)}</TableCell>
+                      <TableCell>
+                        <Badge variant={employee.status === 'active' ? 'default' : 'secondary'}>
+                          {employee.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="outline" size="sm">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="payroll" className="space-y-6">
+          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Payroll Records</CardTitle>
+                <CardDescription>Process and manage employee payroll</CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Process Payroll
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee ID</TableHead>
+                    <TableHead>Period</TableHead>
+                    <TableHead>Base Salary</TableHead>
+                    <TableHead>Deductions</TableHead>
+                    <TableHead>Net Salary</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payrollRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="font-medium">{record.employee_id}</TableCell>
+                      <TableCell>{record.month}/{record.year}</TableCell>
+                      <TableCell>{formatCurrency(record.base_salary)}</TableCell>
+                      <TableCell>{formatCurrency(record.total_deductions)}</TableCell>
+                      <TableCell className="font-semibold text-emerald-600">
+                        {formatCurrency(record.net_salary)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={record.status === 'processed' ? 'default' : 'secondary'}>
+                          {record.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm">
+                          <Eye className="w-4 h-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reimbursements" className="space-y-6">
+          <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle>Reimbursement Requests</CardTitle>
+              <CardDescription>Review and approve employee reimbursements</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Employee ID</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {reimbursements.map((reimbursement) => (
+                    <TableRow key={reimbursement.id}>
+                      <TableCell className="font-medium">{reimbursement.employee_id}</TableCell>
+                      <TableCell className="capitalize">{reimbursement.category}</TableCell>
+                      <TableCell>{formatCurrency(reimbursement.amount)}</TableCell>
+                      <TableCell>{reimbursement.description}</TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          reimbursement.status === 'approved' ? 'default' :
+                          reimbursement.status === 'pending' ? 'secondary' : 'destructive'
+                        }>
+                          {reimbursement.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatDate(reimbursement.submitted_date)}</TableCell>
+                      <TableCell>
+                        {reimbursement.status === 'pending' && (
+                          <div className="flex gap-1">
+                            <Button variant="outline" size="sm" className="text-emerald-600">
+                              <CheckCircle className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="sm" className="text-red-600">
+                              <XCircle className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
+};
+
+// Employee Dashboard
+const EmployeeDashboard = () => {
+  const { user } = useAuth();
+  const [payrollRecords, setPayrollRecords] = useState([]);
+  const [reimbursements, setReimbursements] = useState([]);
+
+  useEffect(() => {
+    if (user?.employee_id) {
+      fetchPayrollRecords();
+      fetchReimbursements();
+    }
+  }, [user]);
+
+  const fetchPayrollRecords = async () => {
+    try {
+      const response = await axios.get(`${API}/payroll`);
+      setPayrollRecords(response.data);
+    } catch (error) {
+      console.error('Error fetching payroll records:', error);
+    }
+  };
+
+  const fetchReimbursements = async () => {
+    try {
+      const response = await axios.get(`${API}/reimbursements`);
+      setReimbursements(response.data);
+    } catch (error) {
+      console.error('Error fetching reimbursements:', error);
+    }
+  };
+
+  const formatCurrency = (amount) => `$${amount?.toLocaleString() || '0'}`;
+  const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
+
+  const latestPayroll = payrollRecords[0];
+
+  return (
+    <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">My Dashboard</h1>
+          <p className="text-slate-600">Welcome back, {user?.username}</p>
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          title="Current Salary"
+          value={latestPayroll ? formatCurrency(latestPayroll.net_salary) : "$0"}
+          icon={DollarSign}
+          color="emerald"
+        />
+        <StatCard
+          title="Total Reimbursements"
+          value={reimbursements.length}
+          icon={Receipt}
+          color="blue"
+        />
+        <StatCard
+          title="Pending Claims"
+          value={reimbursements.filter(r => r.status === 'pending').length}
+          icon={Clock}
+          color="orange"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Latest Payslip */}
+        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-emerald-600" />
+              Latest Payslip
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {latestPayroll ? (
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Period:</span>
+                  <span className="font-medium">{latestPayroll.month}/{latestPayroll.year}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Base Salary:</span>
+                  <span className="font-medium">{formatCurrency(latestPayroll.base_salary)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Bonuses:</span>
+                  <span className="font-medium">{formatCurrency(latestPayroll.bonuses)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Total Deductions:</span>
+                  <span className="font-medium text-red-600">-{formatCurrency(latestPayroll.total_deductions)}</span>
+                </div>
+                <hr />
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold">Net Salary:</span>
+                  <span className="font-bold text-emerald-600 text-lg">
+                    {formatCurrency(latestPayroll.net_salary)}
+                  </span>
+                </div>
+                <Button className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download Payslip
+                </Button>
+              </div>
+            ) : (
+              <p className="text-slate-500 text-center py-8">No payroll records found</p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Reimbursements */}
+        <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-blue-600" />
+              My Reimbursements
+            </CardTitle>
+            <Button variant="outline" size="sm">
+              <Plus className="w-4 h-4 mr-2" />
+              New Claim
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {reimbursements.slice(0, 5).map((reimbursement) => (
+                <div key={reimbursement.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                  <div>
+                    <p className="font-medium text-sm capitalize">{reimbursement.category}</p>
+                    <p className="text-xs text-slate-500">{formatDate(reimbursement.submitted_date)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-semibold">{formatCurrency(reimbursement.amount)}</p>
+                    <Badge variant={
+                      reimbursement.status === 'approved' ? 'default' :
+                      reimbursement.status === 'pending' ? 'secondary' : 'destructive'
+                    }>
+                      {reimbursement.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Salary History */}
+      <Card className="border-0 shadow-lg bg-white/90 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle>Salary History</CardTitle>
+          <CardDescription>Your payroll records over time</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Period</TableHead>
+                <TableHead>Base Salary</TableHead>
+                <TableHead>Overtime</TableHead>
+                <TableHead>Bonuses</TableHead>
+                <TableHead>Deductions</TableHead>
+                <TableHead>Net Salary</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {payrollRecords.map((record) => (
+                <TableRow key={record.id}>
+                  <TableCell className="font-medium">{record.month}/{record.year}</TableCell>
+                  <TableCell>{formatCurrency(record.base_salary)}</TableCell>
+                  <TableCell>{formatCurrency(record.overtime_hours * record.overtime_rate)}</TableCell>
+                  <TableCell>{formatCurrency(record.bonuses)}</TableCell>
+                  <TableCell className="text-red-600">-{formatCurrency(record.total_deductions)}</TableCell>
+                  <TableCell className="font-semibold text-emerald-600">
+                    {formatCurrency(record.net_salary)}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="outline" size="sm">
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// Payroll Officer Dashboard
+const PayrollOfficerDashboard = () => {
+  return (
+    <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Payroll Officer Dashboard</h1>
+          <p className="text-slate-600">Process salaries and manage payroll operations</p>
+        </div>
+      </div>
+      <div className="text-center py-20">
+        <Calculator className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+        <p className="text-slate-500">Payroll Officer Dashboard - Coming Soon</p>
+      </div>
+    </div>
+  );
+};
+
+// Protected Route Component
+const ProtectedRoute = ({ children, allowedRoles }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
+// Layout Component
+const Layout = ({ children }) => {
+  const { user, logout } = useAuth();
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      {/* Top Navigation */}
+      <nav className="bg-white border-b shadow-sm">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-xl text-slate-800">Payroll Central</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <p className="text-sm font-medium text-slate-900">{user?.username}</p>
+                <p className="text-xs text-slate-500 capitalize">{user?.role?.replace('_', ' ')}</p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={logout}
+                className="text-slate-600 hover:text-slate-900"
+              >
+                Logout
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Main Content */}
+      <main>{children}</main>
+    </div>
+  );
+};
+
+// Main App Component
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <div className="App">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <DashboardRouter />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+          <Toaster />
+        </div>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
+
+// Dashboard Router Component
+const DashboardRouter = () => {
+  const { user } = useAuth();
+
+  if (user?.role === 'admin') {
+    return <AdminDashboard />;
+  } else if (user?.role === 'payroll_officer') {
+    return <PayrollOfficerDashboard />;
+  } else if (user?.role === 'employee') {
+    return <EmployeeDashboard />;
+  }
+
+  return <Navigate to="/login" replace />;
+};
 
 export default App;
