@@ -223,6 +223,36 @@ const AdminDashboard = () => {
   const [payrollRecords, setPayrollRecords] = useState([]);
   const [reimbursements, setReimbursements] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
+  
+  // Modal states
+  const [isAddEmployeeOpen, setIsAddEmployeeOpen] = useState(false);
+  const [isEditEmployeeOpen, setIsEditEmployeeOpen] = useState(false);
+  const [isProcessPayrollOpen, setIsProcessPayrollOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  
+  // Form states
+  const [newEmployee, setNewEmployee] = useState({
+    employee_id: '',
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    department: '',
+    position: '',
+    joining_date: '',
+    base_salary: '',
+    bank_account: '',
+    tax_id: '',
+    address: ''
+  });
+
+  const [payrollData, setPayrollData] = useState({
+    employee_id: '',
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear(),
+    overtime_hours: 0,
+    bonuses: 0
+  });
 
   useEffect(() => {
     fetchAnalytics();
@@ -265,6 +295,151 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error fetching reimbursements:', error);
     }
+  };
+
+  const handleAddEmployee = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/employees`, {
+        ...newEmployee,
+        joining_date: new Date(newEmployee.joining_date).toISOString(),
+        base_salary: parseFloat(newEmployee.base_salary)
+      });
+      
+      toast({
+        title: "Success",
+        description: "Employee added successfully"
+      });
+      
+      setIsAddEmployeeOpen(false);
+      setNewEmployee({
+        employee_id: '',
+        first_name: '',
+        last_name: '',
+        email: '',
+        phone: '',
+        department: '',
+        position: '',
+        joining_date: '',
+        base_salary: '',
+        bank_account: '',
+        tax_id: '',
+        address: ''
+      });
+      fetchEmployees();
+      fetchAnalytics();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.response?.data?.detail || "Failed to add employee",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditEmployee = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/employees/${selectedEmployee.employee_id}`, {
+        ...selectedEmployee,
+        joining_date: new Date(selectedEmployee.joining_date).toISOString(),
+        base_salary: parseFloat(selectedEmployee.base_salary)
+      });
+      
+      toast({
+        title: "Success",
+        description: "Employee updated successfully"
+      });
+      
+      setIsEditEmployeeOpen(false);
+      setSelectedEmployee(null);
+      fetchEmployees();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update employee",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleProcessPayroll = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/payroll`, payrollData);
+      
+      toast({
+        title: "Success",
+        description: "Payroll processed successfully"
+      });
+      
+      setIsProcessPayrollOpen(false);
+      setPayrollData({
+        employee_id: '',
+        month: new Date().getMonth() + 1,
+        year: new Date().getFullYear(),
+        overtime_hours: 0,
+        bonuses: 0
+      });
+      fetchPayrollRecords();
+      fetchAnalytics();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process payroll",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleApproveReimbursement = async (reimbursementId) => {
+    try {
+      await axios.put(`${API}/reimbursements/${reimbursementId}/approve`);
+      toast({
+        title: "Success",
+        description: "Reimbursement approved"
+      });
+      fetchReimbursements();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to approve reimbursement",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectReimbursement = async (reimbursementId) => {
+    try {
+      await axios.put(`${API}/reimbursements/${reimbursementId}`, {
+        status: 'rejected'
+      });
+      toast({
+        title: "Success",
+        description: "Reimbursement rejected"
+      });
+      fetchReimbursements();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reject reimbursement",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const exportData = (data, filename) => {
+    const csvContent = "data:text/csv;charset=utf-8," + 
+      Object.keys(data[0]).join(",") + "\n" +
+      data.map(row => Object.values(row).join(",")).join("\n");
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `${filename}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const formatCurrency = (amount) => `$${amount?.toLocaleString() || '0'}`;
