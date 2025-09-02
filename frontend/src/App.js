@@ -1330,10 +1330,82 @@ const EmployeeDashboard = () => {
               <Receipt className="w-5 h-5 text-blue-600" />
               My Reimbursements
             </CardTitle>
-            <Button variant="outline" size="sm">
-              <Plus className="w-4 h-4 mr-2" />
-              New Claim
-            </Button>
+            <Dialog open={isNewClaimOpen} onOpenChange={setIsNewClaimOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Claim
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Submit New Reimbursement</DialogTitle>
+                  <DialogDescription>Submit a new expense claim for reimbursement</DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleCreateClaim} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="claim_category">Category</Label>
+                    <Select value={newClaim.category} onValueChange={(value) => setNewClaim({...newClaim, category: value})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="travel">Travel</SelectItem>
+                        <SelectItem value="medical">Medical</SelectItem>
+                        <SelectItem value="food">Food</SelectItem>
+                        <SelectItem value="equipment">Equipment</SelectItem>
+                        <SelectItem value="training">Training</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="claim_amount">Amount ($)</Label>
+                    <Input
+                      id="claim_amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newClaim.amount}
+                      onChange={(e) => setNewClaim({...newClaim, amount: e.target.value})}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="claim_description">Description</Label>
+                    <Textarea
+                      id="claim_description"
+                      value={newClaim.description}
+                      onChange={(e) => setNewClaim({...newClaim, description: e.target.value})}
+                      placeholder="Describe the expense..."
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="claim_receipt">Receipt URL (Optional)</Label>
+                    <Input
+                      id="claim_receipt"
+                      type="url"
+                      value={newClaim.receipt_url}
+                      onChange={(e) => setNewClaim({...newClaim, receipt_url: e.target.value})}
+                      placeholder="https://example.com/receipt.jpg"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
+                      Submit Claim
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => setIsNewClaimOpen(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
