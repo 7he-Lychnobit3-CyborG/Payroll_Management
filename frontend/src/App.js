@@ -896,14 +896,116 @@ const AdminDashboard = () => {
                 <CardDescription>Process and manage employee payroll</CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline">
+                <Button 
+                  variant="outline"
+                  onClick={() => exportData(payrollRecords, 'payroll_records')}
+                >
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </Button>
-                <Button className="bg-emerald-600 hover:bg-emerald-700">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Process Payroll
-                </Button>
+                <Dialog open={isProcessPayrollOpen} onOpenChange={setIsProcessPayrollOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="bg-emerald-600 hover:bg-emerald-700">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Process Payroll
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Process New Payroll</DialogTitle>
+                      <DialogDescription>Process payroll for an employee</DialogDescription>
+                    </DialogHeader>
+                    <form onSubmit={handleProcessPayroll} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="payroll_employee">Select Employee</Label>
+                        <Select 
+                          value={payrollData.employee_id} 
+                          onValueChange={(value) => setPayrollData({...payrollData, employee_id: value})}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Choose an employee" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {employees.map((employee) => (
+                              <SelectItem key={employee.employee_id} value={employee.employee_id}>
+                                {employee.employee_id} - {employee.first_name} {employee.last_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="payroll_month">Month</Label>
+                          <Select 
+                            value={payrollData.month.toString()} 
+                            onValueChange={(value) => setPayrollData({...payrollData, month: parseInt(value)})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({length: 12}, (_, i) => (
+                                <SelectItem key={i+1} value={(i+1).toString()}>
+                                  {new Date(2024, i).toLocaleString('default', { month: 'long' })}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="payroll_year">Year</Label>
+                          <Select 
+                            value={payrollData.year.toString()} 
+                            onValueChange={(value) => setPayrollData({...payrollData, year: parseInt(value)})}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="2024">2024</SelectItem>
+                              <SelectItem value="2025">2025</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="payroll_overtime">Overtime Hours</Label>
+                        <Input
+                          id="payroll_overtime"
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          value={payrollData.overtime_hours}
+                          onChange={(e) => setPayrollData({...payrollData, overtime_hours: parseFloat(e.target.value) || 0})}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="payroll_bonuses">Bonuses ($)</Label>
+                        <Input
+                          id="payroll_bonuses"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={payrollData.bonuses}
+                          onChange={(e) => setPayrollData({...payrollData, bonuses: parseFloat(e.target.value) || 0})}
+                        />
+                      </div>
+
+                      <div className="flex gap-2 pt-4">
+                        <Button type="submit" className="flex-1 bg-emerald-600 hover:bg-emerald-700">
+                          Process Payroll
+                        </Button>
+                        <Button type="button" variant="outline" onClick={() => setIsProcessPayrollOpen(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
             </CardHeader>
             <CardContent>
