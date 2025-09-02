@@ -1074,7 +1074,7 @@ const AdminDashboard = () => {
                       <TableCell className="font-medium">{reimbursement.employee_id}</TableCell>
                       <TableCell className="capitalize">{reimbursement.category}</TableCell>
                       <TableCell>{formatCurrency(reimbursement.amount)}</TableCell>
-                      <TableCell>{reimbursement.description}</TableCell>
+                      <TableCell className="max-w-xs truncate">{reimbursement.description}</TableCell>
                       <TableCell>
                         <Badge variant={
                           reimbursement.status === 'approved' ? 'default' :
@@ -1087,13 +1087,28 @@ const AdminDashboard = () => {
                       <TableCell>
                         {reimbursement.status === 'pending' && (
                           <div className="flex gap-1">
-                            <Button variant="outline" size="sm" className="text-emerald-600">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                              onClick={() => handleApproveReimbursement(reimbursement.id)}
+                            >
                               <CheckCircle className="w-4 h-4" />
                             </Button>
-                            <Button variant="outline" size="sm" className="text-red-600">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleRejectReimbursement(reimbursement.id)}
+                            >
                               <XCircle className="w-4 h-4" />
                             </Button>
                           </div>
+                        )}
+                        {reimbursement.status !== 'pending' && (
+                          <Button variant="outline" size="sm">
+                            <Eye className="w-4 h-4" />
+                          </Button>
                         )}
                       </TableCell>
                     </TableRow>
