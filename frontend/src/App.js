@@ -1312,7 +1312,7 @@ const EmployeeDashboard = () => {
                     {formatCurrency(latestPayroll.net_salary)}
                   </span>
                 </div>
-                <Button className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700">
+                <Button className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700" onClick={() => downloadPayslip(latestPayroll)}>
                   <Download className="w-4 h-4 mr-2" />
                   Download Payslip
                 </Button>
