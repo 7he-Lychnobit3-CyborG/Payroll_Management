@@ -182,7 +182,7 @@ const Login = () => {
                 </div>
                 <div className="flex justify-between bg-slate-50 p-2 rounded">
                   <span className="font-medium">Employee:</span>
-                  <span>john.doe / employee123</span>
+                  <span>gary.le / employee123</span>
                 </div>
               </div>
             </div>
